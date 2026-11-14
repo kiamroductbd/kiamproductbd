@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://kiamproductbd.pages.dev/sitemap.xml
+Sitemap: https://kiamproductbd.am2772586.workers.dev/sitemap.xml
