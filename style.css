@@ -259,3 +259,6 @@ dialog#cart::backdrop { background: rgba(20, 8, 8, .55); }
 .cmp th, .cmp td { padding: 8px 10px; font-size: .9rem; }
 .cmp td:nth-child(2), .cmp td:nth-child(3) { min-width: 0; }
 .cmp tbody th { width: 24%; }
+
+/* warranty badge sits above the poster so it never covers the brand logo */
+.shot .badge { position: static; display: block; width: fit-content; margin: 10px 0 10px 12px; }
