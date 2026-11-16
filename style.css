@@ -273,3 +273,4 @@ dialog#cart::backdrop { background: rgba(20, 8, 8, .55); }
 .pay-bk { background: #d12053; color: #fff; }
 .pay-ng { background: #f26b21; color: #fff; }
 .pay-note { margin: 12px 2px 0; color: var(--muted); font-size: .94rem; }
+.pay-num { margin: 0 0 4px !important; color: var(--ink) !important; font: 800 1.25rem var(--font-display); letter-spacing: .02em; }
