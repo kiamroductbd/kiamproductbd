@@ -32,7 +32,7 @@
   var foot = el("div", "ast-foot");
   foot.appendChild(link("📞 ফোন করুন", "tel:" + D.tel, "ast-act"));
   foot.appendChild(link("WhatsApp", "https://wa.me/" + D.wa, "ast-act ast-wa", true));
-  panel.appendChild(head); panel.appendChild(log); panel.appendChild(chips); panel.appendChild(form); panel.appendChild(foot);
+  panel.appendChild(head); panel.appendChild(log); panel.appendChild(chips); panel.appendChild(form);
   document.body.appendChild(fab); document.body.appendChild(panel);
 
   function scroll() { log.scrollTop = log.scrollHeight; }
@@ -173,12 +173,13 @@
   }
   var CATS = [["ইনফ্রারেড কুকার", "ইনফ্রারেড কুকার"], ["ইন্ডাকশন কুকার", "ইন্ডাকশন কুকার"], ["রাইস কুকার", "রাইস কুকার"], ["প্রেসার কুকার", "প্রেসার কুকার"], ["মাল্টি কুকার", "মাল্টি কুকার"]];
   function askWa(raw) { return [["WhatsApp-এ প্রশ্নটি পাঠান", "https://wa.me/" + D.wa + "?text=" + encodeURIComponent("আসসালামু আলাইকুম, আমার একটি প্রশ্ন ছিল: " + raw), "ast-wa", true], ["📞 ফোন করুন " + D.telShow, "tel:" + D.tel]]; }
+  function wantsContact(q) { return has(q, ["যোগাযোগ", "কনফার্ম", "confirm", "কনফার্ম", "অর্ডার", "order", "ফোন", "নম্বর", "নাম্বার", "কল ", "কল করব", "whatsapp", "হোয়াটসঅ্যাপ", "হোয়াটসআপ", "কথা বলব", "কথা বলতে", "কীভাবে নেব", "কিভাবে নেব", "কিনব", "কিনতে চাই", "নিতে চাই"]); }
   var hist = [];
   function staticFallback(raw) {
     return bot(["এই প্রশ্নের সঠিক উত্তর আমার এখনো জানা নেই, ভুল বললে আপনার ক্ষতি হবে। নিচের বোতামে চাপ দিলে আপনার প্রশ্নটি সরাসরি আমাদের হোয়াটসঅ্যাপে চলে যাবে, আমরা উত্তর দেব।", acts(askWa(raw)), "অথবা এগুলো থেকে বেছে নিন:", choices([["পণ্যের দাম তালিকা", "দাম তালিকা"], ["ডেলিভারি", "ডেলিভারি"], ["পেমেন্ট", "পেমেন্ট"], ["ওয়ারেন্টি", "ওয়ারেন্টি"]])]);
   }
   function brain(raw) {
-    var wait = bot(["একটু ভাবছি..."]);
+    var wait = bot(["Typing..."]);
     var done = false;
     function fail() { if (done) return; done = true; if (wait.parentNode) wait.parentNode.removeChild(wait); staticFallback(raw); }
     var timer = setTimeout(fail, 20000);
@@ -192,7 +193,7 @@
           if (wait.parentNode) wait.parentNode.removeChild(wait);
           hist.push({ role: "user", content: raw }); hist.push({ role: "assistant", content: d.reply }); if (hist.length > 8) hist = hist.slice(-8);
           var parts = d.reply.split(/\n+/).filter(function (x) { return x.trim(); });
-          parts.push(callRow());
+          if (wantsContact(norm(raw))) parts.push(callRow());
           bot(parts);
         })
         .catch(function () { clearTimeout(timer); fail(); });
@@ -209,7 +210,7 @@
     }
     if (has(q, ["ধন্যবাদ", "thanks", "thank"])) return bot(["আপনাকেও ধন্যবাদ। আর কিছু জানার থাকলে লিখুন।"]);
     var qa = qaHit(q);
-    if (qa) { var qp = [qa.a]; if (qa.link) qp.push(acts([[qa.linkText || "আরও পড়ুন", qa.link]])); return bot(qp); }
+    if (qa) { var qp = [qa.a]; if (qa.link && (qa.link.indexOf("wa.me") === -1 || wantsContact(q))) qp.push(acts([[qa.linkText || "আরও পড়ুন", qa.link]])); return bot(qp); }
     if (has(q, ["অনুমোদিত", "অথরাইজড", "authorized", "authorised", "অফিসিয়াল", "official", "ডিলার", "dealer", "নকল", "duplicate", "অরিজিনাল", "original", "আসল"])) {
       return bot(["আমরা কুমারখালী, কুষ্টিয়ার একটি দোকান, Kiam পণ্য অনলাইনে বিক্রি করি। ইন্ডাকশন কুকারের গ্লাস বাদে সব পণ্যে ১ বছরের ওয়ারেন্টি দিই, আর নষ্ট পণ্য ৫ দিনের মধ্যে ফেরত নিই। এর বাইরে এ বিষয়ে আরও জানতে সরাসরি ফোন করুন।", callRow()]);
     }
