@@ -20,7 +20,7 @@
   fab.appendChild(el("span", "ast-fab-ico", "💬")); fab.appendChild(el("span", "ast-fab-txt", "প্রশ্ন করুন"));
   var panel = el("section", "ast-panel"); panel.hidden = true; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Kiam সহকারী");
   var head = el("div", "ast-head");
-  var ht = el("div", "ast-title"); ht.appendChild(el("b", null, "Kiam সহকারী")); ht.appendChild(el("span", null, "দোকানের জানা তথ্য থেকে উত্তর দিই"));
+  var ht = el("div", "ast-title"); ht.appendChild(el("b", null, "Kiam সহকারী")); ht.appendChild(el("span", null, "দোকানের তথ্য থেকে উত্তর দিই"));
   var close = el("button", "ast-close", "✕"); close.type = "button"; close.setAttribute("aria-label", "বন্ধ করুন");
   head.appendChild(ht); head.appendChild(close);
   var log = el("div", "ast-log"); log.setAttribute("aria-live", "polite");
@@ -173,6 +173,31 @@
   }
   var CATS = [["ইনফ্রারেড কুকার", "ইনফ্রারেড কুকার"], ["ইন্ডাকশন কুকার", "ইন্ডাকশন কুকার"], ["রাইস কুকার", "রাইস কুকার"], ["প্রেসার কুকার", "প্রেসার কুকার"], ["মাল্টি কুকার", "মাল্টি কুকার"]];
   function askWa(raw) { return [["WhatsApp-এ প্রশ্নটি পাঠান", "https://wa.me/" + D.wa + "?text=" + encodeURIComponent("আসসালামু আলাইকুম, আমার একটি প্রশ্ন ছিল: " + raw), "ast-wa", true], ["📞 ফোন করুন " + D.telShow, "tel:" + D.tel]]; }
+  var hist = [];
+  function staticFallback(raw) {
+    return bot(["এই প্রশ্নের সঠিক উত্তর আমার এখনো জানা নেই, ভুল বললে আপনার ক্ষতি হবে। নিচের বোতামে চাপ দিলে আপনার প্রশ্নটি সরাসরি আমাদের হোয়াটসঅ্যাপে চলে যাবে, আমরা উত্তর দেব।", acts(askWa(raw)), "অথবা এগুলো থেকে বেছে নিন:", choices([["পণ্যের দাম তালিকা", "দাম তালিকা"], ["ডেলিভারি", "ডেলিভারি"], ["পেমেন্ট", "পেমেন্ট"], ["ওয়ারেন্টি", "ওয়ারেন্টি"]])]);
+  }
+  function brain(raw) {
+    var wait = bot(["একটু ভাবছি..."]);
+    var done = false;
+    function fail() { if (done) return; done = true; if (wait.parentNode) wait.parentNode.removeChild(wait); staticFallback(raw); }
+    var timer = setTimeout(fail, 20000);
+    try {
+      fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: hist.concat([{ role: "user", content: raw }]) }) })
+        .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+        .then(function (d) {
+          if (done) return; clearTimeout(timer);
+          if (!d || !d.reply) throw 0;
+          done = true;
+          if (wait.parentNode) wait.parentNode.removeChild(wait);
+          hist.push({ role: "user", content: raw }); hist.push({ role: "assistant", content: d.reply }); if (hist.length > 8) hist = hist.slice(-8);
+          var parts = d.reply.split(/\n+/).filter(function (x) { return x.trim(); });
+          parts.push(callRow());
+          bot(parts);
+        })
+        .catch(function () { clearTimeout(timer); fail(); });
+    } catch (e) { clearTimeout(timer); fail(); }
+  }
   function answer(raw) {
     var q = norm(raw).replace(/কুকর/g, "কুকার");
     if (!q) return;
@@ -262,7 +287,7 @@
     if (has(q, ["অর্ডার", "order", "কিনব", "কিনতে", "কিনবো", "কেনা"])) {
       return bot(["অর্ডার করতে পণ্যের নিচে “WhatsApp-এ অর্ডার” বোতামে চাপ দিন, অথবা " + D.telShow + " নম্বরে ফোন করুন। নাম, পুরো ঠিকানা আর ফোন নম্বর জানাবেন। সাইটে পণ্য “অর্ডার তালিকায়” যোগ করে একসাথেও অর্ডার পাঠানো যায়।", callRow()]);
     }
-    return bot(["এই প্রশ্নের সঠিক উত্তর আমার এখনো জানা নেই, ভুল বললে আপনার ক্ষতি হবে। নিচের বোতামে চাপ দিলে আপনার প্রশ্নটি সরাসরি আমাদের হোয়াটসঅ্যাপে চলে যাবে, আমরা উত্তর দেব।", acts(askWa(raw)), "অথবা এগুলো থেকে বেছে নিন:", choices([["পণ্যের দাম তালিকা", "দাম তালিকা"], ["ডেলিভারি", "ডেলিভারি"], ["পেমেন্ট", "পেমেন্ট"], ["ওয়ারেন্টি", "ওয়ারেন্টি"]])]);
+    return brain(raw);
   }
 
   var QUICK = [["পণ্যের দাম তালিকা", "দাম তালিকা"], ["ডেলিভারি", "ডেলিভারি"], ["টাকা দেওয়ার উপায়", "পেমেন্ট"], ["ওয়ারেন্টি", "ওয়ারেন্টি"], ["ফেরত", "ফেরত"], ["৩০০০ টাকার মধ্যে", "৩০০০ টাকার মধ্যে"], ["ঠিকানা ও যোগাযোগ", "যোগাযোগ"]];
