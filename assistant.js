@@ -175,6 +175,26 @@
   function askWa(raw) { return [["WhatsApp-এ প্রশ্নটি পাঠান", "https://wa.me/" + D.wa + "?text=" + encodeURIComponent("আসসালামু আলাইকুম, আমার একটি প্রশ্ন ছিল: " + raw), "ast-wa", true], ["📞 ফোন করুন " + D.telShow, "tel:" + D.tel]]; }
   function wantsContact(q) { return has(q, ["যোগাযোগ", "কনফার্ম", "confirm", "কনফার্ম", "অর্ডার", "order", "ফোন", "নম্বর", "নাম্বার", "কল ", "কল করব", "whatsapp", "হোয়াটসঅ্যাপ", "হোয়াটসআপ", "কথা বলব", "কথা বলতে", "কীভাবে নেব", "কিভাবে নেব", "কিনব", "কিনতে চাই", "নিতে চাই"]); }
   var hist = [];
+  var STORE = "kiam-ast-chat-v1", saveT = null;
+  function persist() {
+    try {
+      var c = log.cloneNode(true);
+      Array.prototype.slice.call(c.querySelectorAll(".ast-msg")).forEach(function (m) { if (m.textContent.trim() === "Typing...") m.parentNode.removeChild(m); });
+      Array.prototype.slice.call(c.querySelectorAll("button")).forEach(function (b) { b.parentNode.removeChild(b); });
+      var msgs = Array.prototype.slice.call(c.children);
+      while (msgs.length > 60) { c.removeChild(msgs.shift()); }
+      var html = c.innerHTML;
+      if (html.length > 300000) return;
+      localStorage.setItem(STORE, JSON.stringify({ html: html, hist: hist.slice(-8) }));
+    } catch (e) {}
+  }
+  function queueSave() { clearTimeout(saveT); saveT = setTimeout(persist, 250); }
+  try { new MutationObserver(queueSave).observe(log, { childList: true, subtree: true }); } catch (e) {}
+  var restored = false;
+  try {
+    var sv = JSON.parse(localStorage.getItem(STORE) || "null");
+    if (sv && sv.html) { log.innerHTML = sv.html; hist = Array.isArray(sv.hist) ? sv.hist : []; restored = true; setTimeout(scroll, 0); }
+  } catch (e) {}
   function staticFallback(raw) {
     return bot(["এই প্রশ্নের সঠিক উত্তর আমার এখনো জানা নেই, ভুল বললে আপনার ক্ষতি হবে। নিচের বোতামে চাপ দিলে আপনার প্রশ্নটি সরাসরি আমাদের হোয়াটসঅ্যাপে চলে যাবে, আমরা উত্তর দেব।", acts(askWa(raw)), "অথবা এগুলো থেকে বেছে নিন:", choices([["পণ্যের দাম তালিকা", "দাম তালিকা"], ["ডেলিভারি", "ডেলিভারি"], ["পেমেন্ট", "পেমেন্ট"], ["ওয়ারেন্টি", "ওয়ারেন্টি"]])]);
   }
@@ -297,14 +317,17 @@
     b.addEventListener("click", function () { me(c[0]); answer(c[1]); });
     chips.appendChild(b);
   });
-  var started = false;
+  var started = restored;
   function open() {
     panel.hidden = false; fab.hidden = true;
+    try { sessionStorage.setItem("kiam-ast-open", "1"); } catch (e) {}
+    setTimeout(scroll, 0);
     if (!started) { started = true; bot(["আসসালামু আলাইকুম! আমি Kiam Product Bd-এর সহকারী। দাম, পণ্য, ডেলিভারি, পেমেন্ট, ওয়ারেন্টি বা ফেরত নিয়ে প্রশ্ন করতে পারেন। পণ্যের নাম (যেমন \"BL-900\" বা \"ইনফ্রারেড কুকার\") বা বাজেট (যেমন \"২০০০ টাকার মধ্যে\") লিখলেও চলবে।"]); }
     setTimeout(function () { input.focus(); }, 50);
   }
-  function shut() { panel.hidden = true; fab.hidden = false; }
+  function shut() { panel.hidden = true; fab.hidden = false; try { sessionStorage.removeItem("kiam-ast-open"); } catch (e) {} }
   fab.addEventListener("click", open); close.addEventListener("click", shut);
+  try { if (restored && sessionStorage.getItem("kiam-ast-open") === "1") open(); } catch (e) {}
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !panel.hidden) shut(); });
   form.addEventListener("submit", function (e) {
     e.preventDefault(); var t = input.value.trim(); if (!t) return;
